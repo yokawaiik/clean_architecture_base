@@ -1,4 +1,4 @@
-import '../../data/errors/dio_exceptions.dart';
+import 'package:dio/dio.dart';
 
 sealed class Failure {}
 
@@ -8,7 +8,7 @@ class NetworkFailure extends Failure {
 } // Вот он! Бизнес-класс отсутствия сети.
 
 class ServerFailure extends Failure {
-  final String message;
+  final String? message;
   ServerFailure(this.message);
 
   ServerFailure.fromDio(DioException dioException)

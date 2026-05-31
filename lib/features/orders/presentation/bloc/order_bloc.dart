@@ -16,14 +16,12 @@ class OfflineException implements Exception {
 }
 
 class OrderBloc extends Bloc<OrderEvent, OrderState> {
-  final CreateOrderUseCase _createOrderUseCase;
-  final GetOrderUseCase _getOrderUseCase;
+  late final CreateOrderUseCase _createOrderUseCase;
+  late final GetOrderUseCase _getOrderUseCase;
 
-  OrderBloc(
-    CreateOrderUseCase createOrderUseCase, {
-    required this._createOrderUseCase,
-    required this._getOrderUseCase,
-  }) : super(OrderInitialState()) {
+  OrderBloc({required this._createOrderUseCase, required this._getOrderUseCase})
+    : super(OrderInitialState()) {
+    on<SubmitOrderEvent>(_onSubmitOrder);
     on<LoadOrderRequestedEvent>(_onLoadOrder);
   }
 

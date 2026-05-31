@@ -4,27 +4,20 @@ import 'package:dio/dio.dart';
 import '../../domain/entitites/order_entity.dart';
 import '../../domain/errors/failures.dart';
 import '../../domain/repositories/order_repository.dart';
-import '../../domain/errors/cache_exception.dart';
 import '../datasources/order_local_data_source.dart';
 import '../datasources/order_remote_data_source.dart';
-import '../errors/dio_exceptions.dart';
 import '../mappers/order_mapper.dart';
-import '../dtos/order_dto.dart';
 import '../mappers/order_response_dto_mapper.dart';
 
 class NetworkOrderRepositoryImpl implements OrderRepository {
-  final Dio _dio;
   final OrderLocalDataSource _localDataSource;
   final OrderRemoteDataSource _remoteDataSource;
 
   // Поля инициализируются через двоеточие ДО выполнения тела конструктора
   const NetworkOrderRepositoryImpl({
-    required Dio dio,
-    required OrderLocalDataSource localDataSource,
-    required OrderRemoteDataSource remoteDataSource,
-  }) : _dio = dio,
-       _localDataSource = localDataSource,
-       _remoteDataSource = remoteDataSource;
+    required this._localDataSource,
+    required this._remoteDataSource,
+  });
 
   @override
   Future<void> createOrder(OrderEntity order) async {
@@ -43,34 +36,24 @@ class NetworkOrderRepositoryImpl implements OrderRepository {
 
   @override
   Future<OrderEntity> getOrderById(String orderId) async {
-    // Реализуем стратегию: Network-First с сохранением в кэш. Если сети нет -> читаем кэш.
-    if (await _dio.isConnected) {
-      try {
-        // 1. Идем в сеть за свежими данными
-        final orderDto = await _remoteDataSource.fetchOrder(orderId);
+    // Реализуем стратегию: Network-First с кэшированием.
+    try {
+      // 1. Идем в сеть за свежими данными
+      final orderDto = await _remoteDataSource.fetchOrder(orderId);
 
-        // 2. Асинхронно обновляем локальный кэш
-        await _localDataSource.cacheOrder(orderDto);
+      // 2. Асинхронно обновляем локальный кэш (не блокируем возврат данных)
+      _localDataSource.cacheOrder(orderDto);
 
-        // 3. Возвращаем иммутабельную сущность в Домен
-        return OrderMapper.toEntity(orderDto);
-      } on DioException catch (e) {
-        // Трансляция сетевой ошибки на язык бизнеса (Паттерн переводчик)
-        throw ServerFailure.fromDio(e);
-      }
-    } else {
-      // Сети нет -> Пытаемся выгрести из локального кэша
+      // 3. Возвращаем иммутабельную сущность в Домен
+      return OrderMapper.toEntity(orderDto);
+    } on DioException catch (e) {
+      // Если произошла сетевая ошибка, пытаемся достать из кэша.
       final cachedDto = await _localDataSource.getCachedOrder(orderId);
-
       if (cachedDto != null) {
-        return cachedDto.toEntity();
+        return OrderMapper.toEntity(cachedDto);
       }
-
-      // Кэша тоже нет -> Выбрасываем доменную ошибку отсутствия кэша
-      throw CacheException(
-        message: 'No local data available for this order',
-        statusCode: 404,
-      );
+      // Если и в кэше ничего нет, транслируем сетевую ошибку на язык домена.
+      throw ServerFailure.fromDio(e);
     }
   }
 

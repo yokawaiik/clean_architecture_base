@@ -1,16 +1,30 @@
 import '../dtos/order_dto.dart';
-import '../dtos/order_response_dto.dart';
 
+/// Заглушка для локального источника данных, использующая кэш в памяти.
 class OrderLocalDataSource {
-  final Database _db; // Например, Isar/SQLite
-  OrderLocalDataSource(this._db);
+  // Имитируем кэш с помощью простого Map.
+  // Ключ - это ID заказа, значение - DTO заказа.
+  final Map<String, OrderDto> _inMemoryCache = {};
+
+  OrderLocalDataSource();
 
   Future<void> cacheOrder(OrderDto dto) async {
-    // Сохраняем DTO в локальную таблицу кэша заказов
-    await _db.writeTxn(() => _db.orderCache.put(dto));
+    // Просто добавляем или обновляем запись в нашем кэше.
+    _inMemoryCache[dto.orderId!] = dto;
   }
 
-  Future<OrderResponseDto?> getCachedOrder(String id) async {
-    return await _db.orderCache.get(id);
+  Future<OrderDto?> getCachedOrder(String id) async {
+    // Возвращаем DTO из кэша, если он там есть.
+    return _inMemoryCache[id];
+  }
+
+  Future<void> save(String s, Map<String, dynamic> json) async {
+    throw UnimplementedError();
+    /* no-op */
+  }
+
+  Future<Object?> getAll(String s) async {
+    throw UnimplementedError();
+    /* no-op */
   }
 }

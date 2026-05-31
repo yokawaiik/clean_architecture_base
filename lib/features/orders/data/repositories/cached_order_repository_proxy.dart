@@ -2,14 +2,18 @@
 import '../../domain/entitites/order_entity.dart';
 import '../../domain/errors/failures.dart';
 import '../../domain/repositories/order_repository.dart';
+import '../datasources/order_local_data_source.dart';
 import '../dtos/order_dto.dart';
 import '../mappers/order_mapper.dart';
 
 class CachedOrderRepositoryProxy implements OrderRepository {
   final OrderRepository _networkRepository;
-  final LocalDatabase _localDb; // Например, Isar / Hive / Sqflite
+  final OrderLocalDataSource _localDb; // Например, Isar / Hive / Sqflite
 
-  const CachedOrderRepositoryProxy(this._networkRepository, this._localDb);
+  const CachedOrderRepositoryProxy({
+    required this._networkRepository,
+    required this._localDb,
+  });
 
   @override
   Future<void> createOrder(OrderEntity order) async {
